@@ -1,0 +1,16 @@
+name: DCO
+on:
+  pull_request:
+    branches: [ main ]
+jobs:
+  check-dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check DCO
+        run: |
+          for commit in $(git rev-list --no-merges ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}); do
+            git log -1 --format=%B $commit | grep -qi "Signed-off-by:" || { echo "Commit $commit is missing DCO sign-off"; exit 1; }
+          done

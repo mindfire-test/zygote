@@ -19,7 +19,7 @@ func BenchmarkForkLargeWorld(b *testing.B) {
 	snap := w.Snapshot()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = Fork(s, snap)
 	}
 }

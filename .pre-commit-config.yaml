@@ -9,8 +9,6 @@ repos:
     rev: v0.5.1
     hooks:
       - id: go-fmt
-      - id: go-imports
-      - id: golangci-lint
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.4.0

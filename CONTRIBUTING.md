@@ -1,6 +1,6 @@
 # Contributing to Zygote
 
-First, thank you for your interest in contributing to `zygote`! This project relies on the open-source community to grow and thrive. 
+First, thank you for your interest in contributing to `zygote`! This project relies on the open-source community to grow and thrive.
 
 This document outlines our development process, how to get your environment set up, and the standards we expect from contributions.
 

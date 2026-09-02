@@ -11,15 +11,7 @@ repos:
       - id: go-fmt
       - id: go-imports
       - id: golangci-lint
-  - repo: https://github.com/google/addlicense
-    rev: v1.1.1
-    hooks:
-      - id: addlicense
-        args:
-          - -c
-          - Mindfire
-          - -l
-          - apache
+
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.4.0
     hooks:

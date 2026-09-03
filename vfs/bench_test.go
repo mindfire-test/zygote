@@ -16,7 +16,7 @@ func BenchmarkForkLargeWorld(b *testing.B) {
 		}
 	}
 
-	snap := w.Snapshot()
+	snap, _ := w.Commit()
 
 	b.ResetTimer()
 	for b.Loop() {

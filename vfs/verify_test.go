@@ -21,7 +21,7 @@ func TestVerifyAndReachable(t *testing.T) {
 		t.Fatalf("failed to write: %v", err)
 	}
 
-	snap := world.Snapshot()
+	snap, _ := world.Commit()
 	ctx := context.Background()
 
 	// 1. Verify successful

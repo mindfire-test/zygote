@@ -21,7 +21,7 @@ func TestVerifyAndReachable(t *testing.T) {
 		t.Fatalf("failed to write: %v", err)
 	}
 
-	snap, _ := world.Commit()
+	snap := world.Snapshot()
 	ctx := context.Background()
 
 	// 1. Verify successful
@@ -44,12 +44,12 @@ func TestVerifyAndReachable(t *testing.T) {
 	badStore := vfs.NewMemStore()
 	_, _ = badStore.Put(vfs.Tree{}.Encode()) // empty tree
 	_ = vfs.NewWorld(badStore)
-	
+
 	// Create a valid snapshot in the real store
 	hashC, _ := store.Put([]byte("hello"))
 	treeB := vfs.Tree{{Name: "c.txt", Kind: vfs.KindFile, Hash: hashC, Mode: 0o644, Size: 5}}
 	hashB, _ := store.Put(treeB.Encode())
-	
+
 	// But in badStore we only put treeB, leaving hashC missing
 	badStore.Put(treeB.Encode())
 	badSnap := vfs.Snapshot{Root: hashB}

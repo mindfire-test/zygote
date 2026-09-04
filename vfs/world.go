@@ -18,9 +18,8 @@ var (
 
 // World represents a mutable view of a content-addressed filesystem state.
 type World struct {
-	store   Store
-	root    Hash
-	journal *Journal
+	store Store
+	root  Hash
 }
 
 // NewWorld creates a new world starting from an empty tree.
@@ -28,51 +27,17 @@ func NewWorld(s Store) *World {
 	empty := Tree{}
 	b := empty.Encode()
 	h, _ := s.Put(b)
-	return &World{store: s, root: h, journal: &Journal{}}
+	return &World{store: s, root: h}
 }
 
 // Fork creates a new World from an existing snapshot in O(1).
 func Fork(s Store, snap Snapshot) *World {
-	return &World{store: s, root: snap.Root, journal: &Journal{}}
+	return &World{store: s, root: snap.Root}
 }
 
 // Snapshot returns the current world state hash in O(1).
-// Note: This does NOT commit the journal. It returns the last committed root.
 func (w *World) Snapshot() Snapshot {
 	return Snapshot{Root: w.root}
-}
-
-// Commit flushes the internal Journal, applying all batched structural changes
-// to the tree in one pass, and returns the final Snapshot.
-func (w *World) Commit() (Snapshot, error) {
-	for _, effect := range w.journal.Effects {
-		switch e := effect.(type) {
-		case *WriteEffect:
-			entry := Entry{
-				Name: path.Base(e.P),
-				Kind: KindFile,
-				Hash: e.H,
-				Mode: e.M,
-				Size: e.Size,
-			}
-			parts := strings.Split(e.P, "/")
-			newRoot, err := w.putEntry(w.root, parts[:len(parts)-1], entry)
-			if err != nil {
-				return Snapshot{}, err
-			}
-			w.root = newRoot
-
-		case *RemoveEffect:
-			parts := strings.Split(e.P, "/")
-			newRoot, err := w.removeEntry(w.root, parts)
-			if err != nil {
-				return Snapshot{}, err
-			}
-			w.root = newRoot
-		}
-	}
-	w.journal.Clear()
-	return Snapshot{Root: w.root}, nil
 }
 
 // isValidPath checks for strict path rules: no absolute paths, no ., no .., no empty components.
@@ -111,7 +76,7 @@ func (w *World) saveTree(t Tree) (Hash, error) {
 	return w.store.Put(b)
 }
 
-// WriteFile appends a WriteEffect to the journal, creating intermediate directories if needed upon commit.
+// WriteFile writes a file to the world, creating intermediate directories if needed.
 func (w *World) WriteFile(p string, data []byte, mode uint32) error {
 	if !isValidPath(p) {
 		return ErrInvalidPath
@@ -122,12 +87,20 @@ func (w *World) WriteFile(p string, data []byte, mode uint32) error {
 		return err
 	}
 
-	w.journal.Append(&WriteEffect{
-		P:    p,
-		H:    blobHash,
-		M:    mode,
+	entry := Entry{
+		Name: path.Base(p),
+		Kind: KindFile,
+		Hash: blobHash,
+		Mode: mode,
 		Size: int64(len(data)),
-	})
+	}
+
+	parts := strings.Split(p, "/")
+	newRoot, err := w.putEntry(w.root, parts[:len(parts)-1], entry)
+	if err != nil {
+		return err
+	}
+	w.root = newRoot
 	return nil
 }
 
@@ -189,7 +162,7 @@ func (w *World) putEntry(dirHash Hash, dirs []string, entry Entry) (Hash, error)
 	return w.saveTree(t)
 }
 
-// ReadFile reads the content of a file from the world (reads committed state only).
+// ReadFile reads the content of a file from the world.
 func (w *World) ReadFile(p string) ([]byte, error) {
 	if !isValidPath(p) {
 		return nil, ErrInvalidPath
@@ -242,12 +215,17 @@ func (w *World) getEntry(p string) (Entry, error) {
 	return lastEntry, nil
 }
 
-// Remove appends a RemoveEffect to the journal.
+// Remove removes a file or directory from the world.
 func (w *World) Remove(p string) error {
 	if !isValidPath(p) {
 		return ErrInvalidPath
 	}
-	w.journal.Append(&RemoveEffect{P: p})
+	parts := strings.Split(p, "/")
+	newRoot, err := w.removeEntry(w.root, parts)
+	if err != nil {
+		return err
+	}
+	w.root = newRoot
 	return nil
 }
 

@@ -33,6 +33,9 @@ func verifyNode(ctx context.Context, store Store, h Hash, kind Kind, visited map
 		return nil // already verified
 	}
 	visited[h] = struct{}{}
+	if h == EmptyTreeHash {
+		return nil
+	}
 
 	b, ok := store.Get(h)
 	if !ok {
@@ -86,6 +89,9 @@ func collectReachable(ctx context.Context, store Store, h Hash, kind Kind, reach
 		return nil // already visited
 	}
 	reachable[h] = struct{}{}
+	if h == EmptyTreeHash {
+		return nil
+	}
 
 	b, ok := store.Get(h)
 	if !ok {

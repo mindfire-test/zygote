@@ -1,3 +1,4 @@
+// Package vfs provides vfs.
 package vfs
 
 import (
@@ -10,10 +11,14 @@ import (
 )
 
 var (
+	// ErrInvalidPath indicates invalid.
 	ErrInvalidPath = errors.New("invalid path")
-	ErrNotFound    = fs.ErrNotExist
-	ErrNotDir      = errors.New("not a directory")
-	ErrIsDir       = errors.New("is a directory")
+	// ErrNotFound indicates not found.
+	ErrNotFound = fs.ErrNotExist
+	// ErrNotDir indicates not dir.
+	ErrNotDir = errors.New("not a directory")
+	// ErrIsDir indicates is dir.
+	ErrIsDir = errors.New("is a directory")
 )
 
 // World represents a mutable view of a content-addressed filesystem state.
@@ -92,7 +97,7 @@ func (w *World) WriteFile(p string, data []byte, mode uint32) error {
 		Kind: KindFile,
 		Hash: blobHash,
 		Mode: mode,
-		Size: int64(len(data)),
+		Size: int64(len(data)), //nolint:gosec
 	}
 
 	parts := strings.Split(p, "/")
@@ -128,7 +133,7 @@ func (w *World) putEntry(dirHash Hash, dirs []string, entry Entry) (Hash, error)
 	}
 
 	nextDir := dirs[0]
-	var nextHash Hash = EmptyTreeHash
+	nextHash := EmptyTreeHash
 	idx := -1
 	for i, e := range t {
 		if e.Name == nextDir {
@@ -268,6 +273,7 @@ func (w *World) removeEntry(dirHash Hash, parts []string) (Hash, error) {
 
 // fs.FS implementation
 
+// Open opens file.
 func (w *World) Open(name string) (fs.File, error) {
 	if !fs.ValidPath(name) {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
@@ -286,6 +292,7 @@ func (w *World) Open(name string) (fs.File, error) {
 	return &regFile{entry: entry, data: b, path: name}, nil
 }
 
+// ReadDir reads dir.
 func (w *World) ReadDir(name string) ([]fs.DirEntry, error) {
 	if !fs.ValidPath(name) {
 		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
@@ -309,6 +316,7 @@ func (w *World) ReadDir(name string) ([]fs.DirEntry, error) {
 	return res, nil
 }
 
+// Stat stats file.
 func (w *World) Stat(name string) (fs.FileInfo, error) {
 	if !fs.ValidPath(name) {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
@@ -331,11 +339,11 @@ type regFile struct {
 
 func (f *regFile) Stat() (fs.FileInfo, error) { return &fileInfo{entry: f.entry}, nil }
 func (f *regFile) Read(b []byte) (int, error) {
-	if f.off >= int64(len(f.data)) {
+	if f.off >= int64(len(f.data)) { //nolint:gosec
 		return 0, io.EOF
 	}
 	n := copy(b, f.data[f.off:])
-	f.off += int64(n)
+	f.off += int64(n) //nolint:gosec
 	return n, nil
 }
 func (f *regFile) Close() error { return nil }

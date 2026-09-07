@@ -1,3 +1,4 @@
+// Package journal provides effects.
 package journal
 
 import "sync"
@@ -44,7 +45,7 @@ func (r *Recorder) Record(op, key string, fn func() ([]byte, error)) ([]byte, er
 func (r *Recorder) Entries() []Entry {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	out := make([]Entry, len(r.entries))
 	copy(out, r.entries)
 	return out

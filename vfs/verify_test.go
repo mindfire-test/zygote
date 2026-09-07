@@ -51,7 +51,7 @@ func TestVerifyAndReachable(t *testing.T) {
 	hashB, _ := store.Put(treeB.Encode())
 
 	// But in badStore we only put treeB, leaving hashC missing
-	badStore.Put(treeB.Encode())
+	_, _ = badStore.Put(treeB.Encode())
 	badSnap := vfs.Snapshot{Root: hashB}
 
 	if err := vfs.Verify(ctx, badStore, badSnap); err != vfs.ErrMissingBlock {

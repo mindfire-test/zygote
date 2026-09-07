@@ -1,3 +1,4 @@
+// Package localdir provides localdir.
 package localdir
 
 import (
@@ -11,8 +12,10 @@ import (
 	"github.com/mindfire/zygote/vfs"
 )
 
+// ErrPathEscape indicates traversal.
 var ErrPathEscape = errors.New("security: path traversal attempted")
 
+// Adapter implements Source.
 type Adapter struct {
 	Root          string
 	MaxFileSize   int64
@@ -20,6 +23,7 @@ type Adapter struct {
 	ExcludedPaths []string
 }
 
+// New creates an adapter.
 func New(root string) *Adapter {
 	return &Adapter{
 		Root:         root,
@@ -37,6 +41,7 @@ func (a *Adapter) shouldExclude(name string) bool {
 	return false
 }
 
+// Load loads a world.
 func (a *Adapter) Load(ctx context.Context, w *vfs.World) error {
 	a.ExcludedPaths = nil
 
@@ -77,7 +82,7 @@ func (a *Adapter) Load(ctx context.Context, w *vfs.World) error {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec
 		if err != nil {
 			return err
 		}
@@ -89,10 +94,11 @@ func (a *Adapter) Load(ctx context.Context, w *vfs.World) error {
 
 		rel = filepath.ToSlash(rel)
 
-		return w.WriteFile(rel, data, uint32(info.Mode().Perm()))
+		return w.WriteFile(rel, data, uint32(info.Mode().Perm())) //nolint:gosec
 	})
 }
 
+// Apply applies a world.
 func (a *Adapter) Apply(ctx context.Context, w *vfs.World) error {
 	absRoot, err := filepath.Abs(a.Root)
 	if err != nil {
@@ -131,10 +137,10 @@ func (a *Adapter) Apply(ctx context.Context, w *vfs.World) error {
 			return err
 		}
 
-		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil { //nolint:gosec
 			return err
 		}
 
-		return os.WriteFile(target, data, info.Mode().Perm())
+		return os.WriteFile(target, data, info.Mode().Perm()) //nolint:gosec
 	})
 }

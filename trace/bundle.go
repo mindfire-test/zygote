@@ -1,3 +1,4 @@
+// Package trace provides trace.
 package trace
 
 import (
@@ -17,18 +18,20 @@ import (
 )
 
 var (
-	ErrHashMismatch  = errors.New("corrupt bundle: object content does not match its hash filename")
+	// ErrHashMismatch indicates mismatch.
+	ErrHashMismatch = errors.New("corrupt bundle: object content does not match its hash filename")
+	// ErrMissingObject indicates missing object.
 	ErrMissingObject = errors.New("corrupt bundle: recording relies on objects not present in the bundle")
 )
 
 // ExportFile writes a highly portable zip bundle containing the Recording manifest
 // and all reachable cryptographically hashed vfs objects.
 func ExportFile(filename string, store vfs.Store, rec Recording) error {
-	f, err := os.Create(filename)
+	f, err := os.Create(filename) //nolint:gosec
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	zw := zip.NewWriter(f)
 
@@ -91,7 +94,7 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 	if err != nil {
 		return Bundle{}, err
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck
 
 	var rec Recording
 
@@ -104,7 +107,7 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 			}
 			dec := json.NewDecoder(rc)
 			err = dec.Decode(&rec)
-			rc.Close()
+			_ = rc.Close()
 			if err != nil {
 				return Bundle{}, err
 			}
@@ -123,7 +126,7 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 				return Bundle{}, err
 			}
 			data, err := io.ReadAll(rc)
-			rc.Close()
+			_ = rc.Close()
 			if err != nil {
 				return Bundle{}, err
 			}

@@ -1,3 +1,4 @@
+// Package journal provides effects.
 package journal
 
 import "fmt"
@@ -15,11 +16,17 @@ type Entry struct {
 type DivergenceClass string
 
 const (
+	// ClassEffectMismatch indicates an effect mismatch.
 	ClassEffectMismatch DivergenceClass = "effect-mismatch"
-	ClassWorldMismatch  DivergenceClass = "world-mismatch"
-	ClassStepMismatch   DivergenceClass = "step-mismatch"
-	ClassExhausted      DivergenceClass = "exhausted"
-	ClassMissingObject  DivergenceClass = "missing-object"
+	// ClassWorldMismatch indicates mismatch.
+	ClassWorldMismatch DivergenceClass = "world-mismatch"
+	// ClassStepMismatch indicates mismatch.
+	ClassStepMismatch DivergenceClass = "step-mismatch"
+	// ClassExhausted indicates exhausted.
+	ClassExhausted DivergenceClass = "exhausted"
+	// ClassMissingObject indicates missing object.
+	ClassMissingObject DivergenceClass = "missing-object"
+	// ClassUninstrumented indicates uninstrumented.
 	ClassUninstrumented DivergenceClass = "uninstrumented"
 )
 

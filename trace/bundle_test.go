@@ -64,12 +64,12 @@ func TestRecordAndBundle(t *testing.T) {
 func TestAdversarialCorruption(t *testing.T) {
 	store := vfs.NewMemStore()
 	r := trace.Record(store)
-	r.World().WriteFile("secret.txt", []byte("real content"), 0644)
+	_ = r.World().WriteFile("secret.txt", []byte("real content"), 0644)
 	r.Step("write")
 
 	tmpDir := t.TempDir()
 	bundlePath := filepath.Join(tmpDir, "run.zip")
-	trace.ExportFile(bundlePath, store, r.Recording())
+	_ = trace.ExportFile(bundlePath, store, r.Recording())
 
 	// Corrupt the zip file manually
 	corruptPath := filepath.Join(tmpDir, "corrupt.zip")
@@ -87,16 +87,16 @@ func injectCorruption(t *testing.T, src, dst string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
-	f, err := os.Create(dst)
+	f, err := os.Create(dst) //nolint:gosec
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	zw := zip.NewWriter(f)
-	defer zw.Close()
+	defer func() { _ = zw.Close() }()
 
 	for _, zf := range r.File {
 		rc, err := zf.Open()
@@ -110,11 +110,11 @@ func injectCorruption(t *testing.T, src, dst string) {
 		}
 
 		if zf.Name == "trace.json" {
-			_, _ = io.Copy(w, rc)
+			_, _ = io.Copy(w, rc) //nolint:gosec
 		} else {
 			// Write garbage to the object
 			_, _ = w.Write([]byte("corrupted data that doesn't match hash!"))
 		}
-		rc.Close()
+		_ = rc.Close()
 	}
 }

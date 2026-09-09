@@ -1,3 +1,4 @@
+// Package main provides the CLI for Zygote.
 package main
 
 import (
@@ -19,7 +20,7 @@ var inspectCmd = &cobra.Command{
 	Use:   "inspect [run.zip]",
 	Short: "Inspect bundle metadata and effects",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		bundlePath := args[0]
 		store := vfs.NewMemStore()
 

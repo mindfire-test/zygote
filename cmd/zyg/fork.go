@@ -1,3 +1,4 @@
+// Package main provides the CLI for Zygote.
 package main
 
 import (
@@ -19,7 +20,7 @@ var forkCmd = &cobra.Command{
 	Use:   "fork [run.zip] [step]",
 	Short: "Materialise a step to a directory",
 	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		bundlePath := args[0]
 		stepArg := args[1]
 
@@ -68,7 +69,7 @@ var forkCmd = &cobra.Command{
 		forkWorld := vfs.Fork(store, vfs.Snapshot{Root: h})
 
 		// Ensure directory exists
-		if err := os.MkdirAll(forkInto, 0755); err != nil {
+		if err := os.MkdirAll(forkInto, 0755); err != nil { //nolint:gosec
 			fmt.Fprintf(os.Stderr, "Error creating output directory: %v\n", err)
 			os.Exit(1)
 		}

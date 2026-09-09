@@ -1,3 +1,4 @@
+// Package main provides the CLI for Zygote.
 package main
 
 import (
@@ -13,7 +14,7 @@ var stepsCmd = &cobra.Command{
 	Use:   "steps [run.zip]",
 	Short: "List steps in a recording",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		bundlePath := args[0]
 		store := vfs.NewMemStore()
 

@@ -1,3 +1,4 @@
+// Package main provides the CLI for Zygote.
 package main
 
 import (

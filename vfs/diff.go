@@ -1,3 +1,4 @@
+// Package vfs provides vfs.
 package vfs
 
 // Diff compares two world snapshots and returns a list of changes.

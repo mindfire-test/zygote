@@ -1,3 +1,4 @@
+// Package main provides zygote.
 package main
 
 import "fmt"

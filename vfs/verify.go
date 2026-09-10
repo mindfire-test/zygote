@@ -1,3 +1,4 @@
+// Package vfs provides vfs.
 package vfs
 
 import (

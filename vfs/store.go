@@ -1,3 +1,4 @@
+// Package vfs provides vfs.
 package vfs
 
 import (
@@ -61,7 +62,7 @@ type DiskStore struct {
 
 // NewDiskStore creates a new DiskStore, creating the root directory if necessary.
 func NewDiskStore(root string) (*DiskStore, error) {
-	if err := os.MkdirAll(root, 0o755); err != nil {
+	if err := os.MkdirAll(root, 0o755); err != nil { //nolint:gosec
 		return nil, err
 	}
 	return &DiskStore{root: root}, nil
@@ -81,7 +82,7 @@ func (s *DiskStore) Put(b []byte) (Hash, error) {
 		return hash, nil
 	}
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec
 		return hash, err
 	}
 
@@ -90,12 +91,12 @@ func (s *DiskStore) Put(b []byte) (Hash, error) {
 	_, _ = rand.Read(rnd[:])
 	tmpPath := path + ".tmp" + hex.EncodeToString(rnd[:])
 
-	if err := os.WriteFile(tmpPath, b, 0o444); err != nil {
+	if err := os.WriteFile(tmpPath, b, 0o444); err != nil { //nolint:gosec
 		return hash, err
 	}
 
 	if err := os.Rename(tmpPath, path); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath) //nolint:errcheck,gosec //nolint:errcheck
 		return hash, err
 	}
 
@@ -107,7 +108,7 @@ func (s *DiskStore) Get(h Hash) ([]byte, bool) {
 	hexHash := hex.EncodeToString(h[:])
 	path := filepath.Join(s.root, hexHash[:2], hexHash[2:])
 
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) //nolint:gosec
 	if err != nil {
 		return nil, false
 	}

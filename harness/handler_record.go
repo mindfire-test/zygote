@@ -17,7 +17,7 @@ func NewRecordHandler(r *trace.RunRecorder) *RecordHandler {
 }
 
 // Handshake validates version.
-func (h *RecordHandler) Handshake(version int) (int, error) {
+func (h *RecordHandler) Handshake(_ int) (int, error) {
 	return 1, nil // we support v1
 }
 

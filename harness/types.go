@@ -26,6 +26,7 @@ type Error struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+// Standard JSON-RPC 2.0 error codes.
 const (
 	ErrParse          = -32700
 	ErrInvalidRequest = -32600

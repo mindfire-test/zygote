@@ -17,7 +17,7 @@ func NewReplayHandler(r *trace.RunReplayer) *ReplayHandler {
 }
 
 // Handshake validates version.
-func (h *ReplayHandler) Handshake(version int) (int, error) {
+func (h *ReplayHandler) Handshake(_ int) (int, error) {
 	return 1, nil // we support v1
 }
 

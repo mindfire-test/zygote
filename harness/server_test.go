@@ -11,11 +11,11 @@ type mockHandler struct {
 }
 
 func (m *mockHandler) Handshake(version int) (int, error) { return version, nil }
-func (m *mockHandler) Effect(op, key string, value []byte) ([]byte, error) {
+func (m *mockHandler) Effect(_, _ string, value []byte) ([]byte, error) {
 	m.opCalled = true
 	return value, nil
 }
-func (m *mockHandler) Step(name string) (*StepResult, error) {
+func (m *mockHandler) Step(_ string) (*StepResult, error) {
 	return &StepResult{Match: true}, nil
 }
 

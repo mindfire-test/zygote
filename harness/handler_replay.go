@@ -2,7 +2,6 @@ package harness
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"github.com/mindfire/zygote/trace"
 )
@@ -24,11 +23,7 @@ func (h *ReplayHandler) Handshake(version int) (int, error) {
 
 // Effect fetches the recorded effect, ignoring the requested value.
 func (h *ReplayHandler) Effect(op, key string, _ []byte) ([]byte, error) {
-	val, ok := h.r.Replayer().Get(op, key)
-	if !ok {
-		return nil, fmt.Errorf("divergence: effect %s:%s not found in recording", op, key)
-	}
-	return val, nil
+	return h.r.Replayer().Replay(op, key)
 }
 
 // Step verifies the agent's world against the recording.

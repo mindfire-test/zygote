@@ -29,7 +29,8 @@ var recordCmd = &cobra.Command{
 			os.Exit(3)
 		}
 
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		store := vfs.NewMemStore()
 		r := trace.Record(store)
 
@@ -41,7 +42,7 @@ var recordCmd = &cobra.Command{
 		r.Step("init")
 
 		// shell is required because the agent command might be "python main.py"
-		cmd := exec.CommandContext(ctx, "sh", "-c", recordAgent)
+		cmd := exec.CommandContext(ctx, "sh", "-c", recordAgent) //nolint:gosec
 
 		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
@@ -56,6 +57,7 @@ var recordCmd = &cobra.Command{
 		}
 
 		cmd.Stderr = os.Stderr
+		cmd.Dir = recordDir
 
 		if err := cmd.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error starting agent: %v\n", err)
@@ -65,6 +67,7 @@ var recordCmd = &cobra.Command{
 		srv := harness.NewServer(stdoutPipe, stdinPipe, harness.NewRecordHandler(r))
 
 		srvErr := srv.Serve()
+		cancel()
 
 		cmdErr := cmd.Wait()
 

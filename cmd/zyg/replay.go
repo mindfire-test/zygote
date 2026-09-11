@@ -38,14 +38,15 @@ var replayCmd = &cobra.Command{
 			os.Exit(2) // bundle invalid
 		}
 
-		r, err := trace.Replay(store, bundle)
+		r, err := trace.Replay(store, &bundle)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing replay: %v\n", err)
 			os.Exit(2)
 		}
 
-		ctx := context.Background()
-		cmd := exec.CommandContext(ctx, "sh", "-c", replayAgent)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "sh", "-c", replayAgent) //nolint:gosec
 
 		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
@@ -69,6 +70,7 @@ var replayCmd = &cobra.Command{
 		srv := harness.NewServer(stdoutPipe, stdinPipe, harness.NewReplayHandler(r))
 
 		srvErr := srv.Serve()
+		cancel()
 		cmdErr := cmd.Wait()
 
 		if srvErr != nil {

@@ -2,6 +2,7 @@ package trace
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/mindfire/zygote/journal"
 	"github.com/mindfire/zygote/vfs"
@@ -66,4 +67,76 @@ func (r *RunRecorder) Recording() Recording {
 		Steps:   r.steps,
 		Effects: r.journal.Entries(),
 	}
+}
+
+// RunReplayer orchestrates the replay of a run, checking step boundaries against a Bundle.
+type RunReplayer struct {
+	bundle   *Bundle
+	replayer *journal.Replayer
+	world    *vfs.World
+	stepIdx  int
+}
+
+// Replay initializes a RunReplayer from a Bundle.
+func Replay(store vfs.Store, bundle *Bundle) (*RunReplayer, error) {
+	if len(bundle.Recording.Steps) == 0 {
+		return nil, fmt.Errorf("bundle has no steps")
+	}
+
+	// Initialize the world at the first step
+	rootHex := bundle.Recording.Steps[0].Root
+	hBytes, err := hex.DecodeString(rootHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid root hash in bundle: %w", err)
+	}
+
+	var h vfs.Hash
+	copy(h[:], hBytes)
+	world := vfs.Fork(store, vfs.Snapshot{Root: h})
+
+	return &RunReplayer{
+		bundle:   bundle,
+		replayer: journal.NewReplayer(bundle.Recording.Effects),
+		world:    world,
+		stepIdx:  1, // We start checking from step 1 (step 0 is the init state)
+	}, nil
+}
+
+// Replayer returns the underlying effect replayer.
+func (r *RunReplayer) Replayer() *journal.Replayer {
+	return r.replayer
+}
+
+// World returns the current active world being replayed.
+func (r *RunReplayer) World() *vfs.World {
+	return r.world
+}
+
+// Step verifies the current world against the next expected step in the bundle.
+func (r *RunReplayer) Step(name string) (Check, error) {
+	if r.stepIdx >= len(r.bundle.Recording.Steps) {
+		return Check{}, fmt.Errorf("divergence: agent executed more steps than recorded")
+	}
+
+	expectedStep := r.bundle.Recording.Steps[r.stepIdx]
+	if expectedStep.Name != name {
+		return Check{}, fmt.Errorf("divergence: step-mismatch expected %q, got %q", expectedStep.Name, name)
+	}
+
+	actualSnap := r.world.Snapshot()
+
+	hBytes, _ := hex.DecodeString(expectedStep.Root)
+	var expectedHash vfs.Hash
+	copy(expectedHash[:], hBytes)
+
+	chk := Check{
+		N:        expectedStep.N,
+		Name:     expectedStep.Name,
+		Expected: vfs.Snapshot{Root: expectedHash},
+		Actual:   actualSnap,
+		Match:    expectedHash == actualSnap.Root,
+	}
+
+	r.stepIdx++
+	return chk, nil
 }

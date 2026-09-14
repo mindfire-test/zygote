@@ -7,7 +7,7 @@ name = "zygote-harness"
 version = "0.1.0"
 description = "Python client for the Zygote JSON-RPC 2.0 Harness"
 authors = [
-    {name = "Mindfire", email = "oss@mindfire.com"}
+    {name = "Mindfire"}
 ]
 license = {text = "Apache-2.0"}
 requires-python = ">=3.7"

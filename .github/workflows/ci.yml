@@ -28,5 +28,5 @@ jobs:
       - name: Run govulncheck
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: '1.25.14'
+          go-version-input: '1.26.8'
           go-package: ./...

@@ -8,7 +8,7 @@
     "build": "tsc",
     "test": "node dist/tests/test_client.js"
   },
-  "author": "Mindfire <oss@mindfire.com>",
+  "author": "Mindfire",
   "license": "Apache-2.0",
   "devDependencies": {
     "typescript": "^5.0.0",

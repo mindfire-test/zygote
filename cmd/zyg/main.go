@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"os"
+)
 
 func main() {
-	fmt.Println("zygote CLI - flight recorder for AI agents")
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

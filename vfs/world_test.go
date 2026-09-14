@@ -24,12 +24,12 @@ func TestSnapshotIsContentAddressed(t *testing.T) {
 	s := NewMemStore()
 
 	w1 := NewWorld(s)
-	w1.WriteFile("file1.txt", []byte("1"), 0o644)
-	w1.WriteFile("file2.txt", []byte("2"), 0o644)
+	_ = w1.WriteFile("file1.txt", []byte("1"), 0o644)
+	_ = w1.WriteFile("file2.txt", []byte("2"), 0o644)
 
 	w2 := NewWorld(s)
-	w2.WriteFile("file2.txt", []byte("2"), 0o644)
-	w2.WriteFile("file1.txt", []byte("1"), 0o644)
+	_ = w2.WriteFile("file2.txt", []byte("2"), 0o644)
+	_ = w2.WriteFile("file1.txt", []byte("1"), 0o644)
 
 	snap1 := w1.Snapshot()
 	snap2 := w2.Snapshot()
@@ -43,14 +43,14 @@ func TestDiff(t *testing.T) {
 	s := NewMemStore()
 
 	w1 := NewWorld(s)
-	w1.WriteFile("a/b/c.txt", []byte("1"), 0o644)
-	w1.WriteFile("a/b/d.txt", []byte("2"), 0o644)
+	_ = w1.WriteFile("a/b/c.txt", []byte("1"), 0o644)
+	_ = w1.WriteFile("a/b/d.txt", []byte("2"), 0o644)
 	snap1 := w1.Snapshot()
 
 	w2 := Fork(s, snap1)
-	w2.WriteFile("a/b/c.txt", []byte("3"), 0o644) // modify
-	w2.Remove("a/b/d.txt")                        // delete
-	w2.WriteFile("a/e.txt", []byte("4"), 0o644)   // add
+	_ = w2.WriteFile("a/b/c.txt", []byte("3"), 0o644) // modify
+	_ = w2.Remove("a/b/d.txt")                        // delete
+	_ = w2.WriteFile("a/e.txt", []byte("4"), 0o644)   // add
 	snap2 := w2.Snapshot()
 
 	changes, err := Diff(s, snap1, snap2)

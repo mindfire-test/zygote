@@ -1,3 +1,4 @@
+// Package vfs provides vfs.
 package vfs
 
 // Hash is a 32-byte BLAKE3 root hash.
@@ -18,8 +19,10 @@ type Store interface {
 type Kind uint8
 
 const (
+	// KindFile indicates file.
 	KindFile Kind = 0
-	KindDir  Kind = 1
+	// KindDir indicates dir.
+	KindDir Kind = 1
 )
 
 // Entry represents a single file or directory in a tree.
@@ -35,8 +38,11 @@ type Entry struct {
 type ChangeKind uint8
 
 const (
+	// Added indicates added.
 	Added ChangeKind = iota
+	// Modified indicates modified.
 	Modified
+	// Deleted indicates deleted.
 	Deleted
 )
 

@@ -1,3 +1,4 @@
+// Package vfs provides vfs.
 package vfs
 
 import (
@@ -25,11 +26,11 @@ func (t Tree) Encode() []byte {
 	}
 
 	b := make([]byte, size)
-	binary.BigEndian.PutUint32(b[0:4], uint32(len(t)))
+	binary.BigEndian.PutUint32(b[0:4], uint32(len(t))) //nolint:gosec
 
 	offset := 4
 	for _, e := range t {
-		nameLen := uint16(len(e.Name))
+		nameLen := uint16(len(e.Name)) //nolint:gosec
 		binary.BigEndian.PutUint16(b[offset:offset+2], nameLen)
 		offset += 2
 
@@ -37,12 +38,12 @@ func (t Tree) Encode() []byte {
 		offset += int(nameLen)
 
 		b[offset] = byte(e.Kind)
-		offset += 1
+		offset++
 
 		binary.BigEndian.PutUint32(b[offset:offset+4], e.Mode)
 		offset += 4
 
-		binary.BigEndian.PutUint64(b[offset:offset+8], uint64(e.Size))
+		binary.BigEndian.PutUint64(b[offset:offset+8], uint64(e.Size)) //nolint:gosec
 		offset += 8
 
 		copy(b[offset:offset+32], e.Hash[:])
@@ -64,7 +65,7 @@ func DecodeTree(b []byte) (Tree, error) {
 	}
 
 	offset := 4
-	for i := uint32(0); i < count; i++ {
+	for i := uint32(0); i < count; i++ { //nolint:gosec
 		if offset+2 > len(b) {
 			return nil, ErrInvalidTree
 		}
@@ -80,12 +81,12 @@ func DecodeTree(b []byte) (Tree, error) {
 		offset += int(nameLen)
 
 		kind := Kind(b[offset])
-		offset += 1
+		offset++
 
 		mode := binary.BigEndian.Uint32(b[offset : offset+4])
 		offset += 4
 
-		size := binary.BigEndian.Uint64(b[offset : offset+8])
+		size := binary.BigEndian.Uint64(b[offset : offset+8]) //nolint:gosec
 		offset += 8
 
 		var hash Hash
@@ -96,7 +97,7 @@ func DecodeTree(b []byte) (Tree, error) {
 			Name: name,
 			Kind: kind,
 			Mode: mode,
-			Size: int64(size),
+			Size: int64(size), //nolint:gosec
 			Hash: hash,
 		})
 	}

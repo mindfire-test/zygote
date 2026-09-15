@@ -16,11 +16,14 @@ type Step struct {
 
 // Recording is the canonical manifest of a Run, containing steps and effects.
 type Recording struct {
-	Version       int               `json:"version"`
-	HasRawPrompts bool              `json:"has_raw_prompts"`
-	Meta          map[string]string `json:"meta,omitempty"`
-	Steps         []Step            `json:"steps"`
-	Effects       []journal.Entry   `json:"effects"`
+	Version          int               `json:"version"`
+	HashAlgorithm    string            `json:"hash_algorithm"`
+	Producer         string            `json:"producer"`
+	RedactionApplied string            `json:"redaction_applied,omitempty"`
+	HasRawPrompts    bool              `json:"has_raw_prompts"`
+	Meta             map[string]string `json:"meta,omitempty"`
+	Steps            []Step            `json:"steps"`
+	Effects          []journal.Entry   `json:"effects"`
 }
 
 // Check represents the per-step replay verdict, comparing the expected

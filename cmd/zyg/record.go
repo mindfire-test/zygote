@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/mindfire/zygote/harness"
+	"github.com/mindfire/zygote/pkg/redact"
 	"github.com/mindfire/zygote/source/localdir"
 	"github.com/mindfire/zygote/trace"
 	"github.com/mindfire/zygote/vfs"
@@ -41,7 +43,6 @@ var recordCmd = &cobra.Command{
 		}
 		r.Step("init")
 
-		// shell is required because the agent command might be "python main.py"
 		cmd := exec.CommandContext(ctx, "sh", "-c", recordAgent) //nolint:gosec
 
 		stdoutPipe, err := cmd.StdoutPipe()
@@ -76,12 +77,30 @@ var recordCmd = &cobra.Command{
 			os.Exit(3)
 		}
 
-		if cmdErr != nil {
+		if cmdErr != nil && cmdErr.Error() != "signal: killed" {
 			fmt.Fprintf(os.Stderr, "Agent exited with error: %v\n", cmdErr)
-			os.Exit(3) // Harness Error covers agent crash
+			os.Exit(3)
 		}
 
-		if err := trace.ExportFile(recordOut, store, r.Recording()); err != nil {
+		bundle := &trace.Bundle{
+			Recording: r.Recording(),
+			Store:     store,
+		}
+
+		policyPath := filepath.Join(recordDir, ".zygote", "redact.yaml")
+		policy, err := redact.LoadPolicy(policyPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading redact policy: %v\n", err)
+			os.Exit(3)
+		}
+
+		cleanBundle, err := trace.RedactBundle(bundle, policy)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Redaction failed (fail-closed): %v\n", err)
+			os.Exit(3)
+		}
+
+		if err := trace.ExportFile(recordOut, cleanBundle.Store, cleanBundle.Recording); err != nil {
 			fmt.Fprintf(os.Stderr, "Error exporting bundle: %v\n", err)
 			os.Exit(3)
 		}

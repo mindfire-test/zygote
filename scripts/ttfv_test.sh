@@ -41,7 +41,7 @@ PY
 ../zyg record --agent "python3 agent.py" --dir . -o run.zip >/dev/null 2>&1
 
 # 4. Alter the agent logic to introduce a divergence
-sed -i '' 's/"key":"ask"/"key":"different_ask"/' agent.py
+sed 's/"key":"ask"/"key":"different_ask"/' agent.py > agent.py.tmp && mv agent.py.tmp agent.py
 
 # 5. Replay and verify Zygote catches the divergence (expecting exit code 1)
 set +e

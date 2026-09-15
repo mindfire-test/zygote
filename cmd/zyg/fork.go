@@ -1,4 +1,3 @@
-// Package main provides the CLI for Zygote.
 package main
 
 import (
@@ -18,70 +17,56 @@ var forkInto string
 
 var forkCmd = &cobra.Command{
 	Use:   "fork [run.zip] [step]",
-	Short: "Materialise a step to a directory",
+	Short: "Materialize a step into a local directory",
 	Args:  cobra.ExactArgs(2),
 	Run: func(_ *cobra.Command, args []string) {
 		bundlePath := args[0]
-		stepArg := args[1]
+		stepStr := args[1]
+
+		stepNum, err := strconv.Atoi(stepStr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid step number: %v\n", err)
+			os.Exit(3)
+		}
 
 		if forkInto == "" {
-			fmt.Fprintln(os.Stderr, "Error: --into must be specified")
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "Error: --into is required\n")
+			os.Exit(3)
 		}
 
 		store := vfs.NewMemStore()
 		bundle, err := trace.ImportFile(bundlePath, store)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error importing bundle: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error loading bundle: %v\n", err)
 			os.Exit(2)
 		}
 
-		var targetStep *trace.Step
-
-		// check if stepArg is an integer index
-		if idx, err := strconv.Atoi(stepArg); err == nil && idx >= 0 && idx < len(bundle.Recording.Steps) {
-			targetStep = &bundle.Recording.Steps[idx]
-		} else {
-			// fallback to name matching
-			for i, s := range bundle.Recording.Steps {
-				if s.Name == stepArg {
-					targetStep = &bundle.Recording.Steps[i]
-					break
-				}
-			}
+		if stepNum < 0 || stepNum >= len(bundle.Recording.Steps) {
+			fmt.Fprintf(os.Stderr, "Step out of range (max %d)\n", len(bundle.Recording.Steps)-1)
+			os.Exit(3)
 		}
 
-		if targetStep == nil {
-			fmt.Fprintf(os.Stderr, "Error: step '%s' not found\n", stepArg)
-			os.Exit(1)
-		}
+		step := bundle.Recording.Steps[stepNum]
+		rootHex := step.Root
 
-		hBytes, err := hex.DecodeString(targetStep.Root)
+		hBytes, err := hex.DecodeString(rootHex)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: invalid step hash\n")
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "Invalid root hash in bundle: %v\n", err)
+			os.Exit(2)
 		}
 
 		var h vfs.Hash
 		copy(h[:], hBytes)
 
-		// Create the fork
-		forkWorld := vfs.Fork(store, vfs.Snapshot{Root: h})
+		world := vfs.Fork(store, vfs.Snapshot{Root: h})
 
-		// Ensure directory exists
-		if err := os.MkdirAll(forkInto, 0755); err != nil { //nolint:gosec
-			fmt.Fprintf(os.Stderr, "Error creating output directory: %v\n", err)
-			os.Exit(1)
-		}
-
-		// Apply the world to the directory
 		adapter := localdir.New(forkInto)
-		if err := adapter.Apply(context.Background(), forkWorld); err != nil {
-			fmt.Fprintf(os.Stderr, "Error applying world: %v\n", err)
-			os.Exit(1)
+		if err := adapter.Apply(context.Background(), world); err != nil {
+			fmt.Fprintf(os.Stderr, "Error exporting world to %s: %v\n", forkInto, err)
+			os.Exit(3)
 		}
 
-		fmt.Printf("Successfully forked step '%s' into %s\n", targetStep.Name, forkInto)
+		fmt.Printf("Successfully materialised step %d (%s) into %s\n", stepNum, step.Name, forkInto)
 	},
 }
 

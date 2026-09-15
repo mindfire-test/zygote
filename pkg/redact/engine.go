@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// Engine executes redaction policies.
 type Engine struct {
 	scanner *Scanner
 	policy  *Policy
 }
 
+// NewEngine initializes a redaction engine with the given policy.
 func NewEngine(policy *Policy) (*Engine, error) {
 	s, err := NewScanner()
 	if err != nil {
@@ -17,6 +19,7 @@ func NewEngine(policy *Policy) (*Engine, error) {
 	return &Engine{scanner: s, policy: policy}, nil
 }
 
+// ProcessResult contains the result of redacting a payload.
 type ProcessResult struct {
 	Content    []byte
 	DigestOnly bool

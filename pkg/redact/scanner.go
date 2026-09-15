@@ -19,12 +19,14 @@ type ruleDef struct {
 	Regex string `toml:"regex"`
 }
 
+// Finding represents a detected secret.
 type Finding struct {
 	RuleID string
 	Start  int
 	End    int
 }
 
+// Scanner scans for secrets.
 type Scanner struct {
 	rules []compiledRule
 }
@@ -34,6 +36,7 @@ type compiledRule struct {
 	re *regexp.Regexp
 }
 
+// NewScanner initializes a secret scanner.
 func NewScanner() (*Scanner, error) {
 	var cfg rulesConfig
 	if err := toml.Unmarshal(rulesTOML, &cfg); err != nil {
@@ -52,6 +55,7 @@ func NewScanner() (*Scanner, error) {
 	return &Scanner{rules: rules}, nil
 }
 
+// Scan scans the content for secrets.
 func (s *Scanner) Scan(content []byte) []Finding {
 	var findings []Finding
 	for _, r := range s.rules {

@@ -115,12 +115,12 @@ func (r *RunReplayer) World() *vfs.World {
 // Step verifies the current world against the next expected step in the bundle.
 func (r *RunReplayer) Step(name string) (Check, error) {
 	if r.stepIdx >= len(r.bundle.Recording.Steps) {
-		return Check{}, fmt.Errorf("divergence: agent executed more steps than recorded")
+		return Check{}, &journal.DivergenceError{Class: journal.ClassExhausted, Message: "agent executed more steps than recorded", Step: r.stepIdx}
 	}
 
 	expectedStep := r.bundle.Recording.Steps[r.stepIdx]
 	if expectedStep.Name != name {
-		return Check{}, fmt.Errorf("divergence: step-mismatch expected %q, got %q", expectedStep.Name, name)
+		return Check{}, &journal.DivergenceError{Class: journal.ClassStepMismatch, Message: fmt.Sprintf("expected %q, got %q", expectedStep.Name, name), Step: r.stepIdx}
 	}
 
 	actualSnap := r.world.Snapshot()
@@ -138,5 +138,12 @@ func (r *RunReplayer) Step(name string) (Check, error) {
 	}
 
 	r.stepIdx++
+	if !chk.Match {
+		return chk, &journal.DivergenceError{
+			Class:   journal.ClassWorldMismatch,
+			Message: fmt.Sprintf("world hash mismatch: expected %x, got %x", expectedHash[:], actualSnap.Root[:]),
+			Step:    chk.N,
+		}
+	}
 	return chk, nil
 }

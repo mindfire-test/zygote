@@ -13,7 +13,6 @@ type Handler interface {
 	Handshake(version int) (int, error)
 	Effect(op, key string, value []byte) ([]byte, error)
 	Step(name string) (*StepResult, error)
-	// Additional methods like fs.read, materialise can be added here
 }
 
 // Server is a JSON-RPC 2.0 server over line-delimited stdio.
@@ -36,7 +35,6 @@ func NewServer(in io.Reader, out io.Writer, handler Handler) *Server {
 // Invalid JSON is echoed to os.Stderr as agent logs.
 func (s *Server) Serve() error {
 	scanner := bufio.NewScanner(s.in)
-	// Allow large tokens for base64 encoded effects
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, 1024*1024*10)
 
@@ -48,7 +46,6 @@ func (s *Server) Serve() error {
 
 		var req Request
 		if err := json.Unmarshal(line, &req); err != nil {
-			// Not valid JSON, treat as standard agent log.
 			fmt.Fprintf(os.Stderr, "[Agent] %s\n", string(line))
 			continue
 		}
@@ -59,7 +56,6 @@ func (s *Server) Serve() error {
 		}
 
 		if err := s.handleRequest(&req); err != nil {
-			// FR-6.3: A protocol violation fails the run closed.
 			return err
 		}
 	}
@@ -91,10 +87,9 @@ func (s *Server) handleRequest(req *Request) error {
 		} else {
 			val, err := s.handler.Effect(p.Op, p.Key, p.Value)
 			if err != nil {
-				res.Error = &Error{Code: ErrInternal, Message: err.Error()}
-			} else {
-				res.Result = EffectResult{Value: val}
+				return err // Fail closed immediately, propagate Go error
 			}
+			res.Result = EffectResult{Value: val}
 		}
 
 	case "step":
@@ -104,17 +99,15 @@ func (s *Server) handleRequest(req *Request) error {
 		} else {
 			result, err := s.handler.Step(p.Name)
 			if err != nil {
-				res.Error = &Error{Code: ErrInternal, Message: err.Error()}
-			} else {
-				res.Result = result
+				return err // Fail closed immediately, propagate Go error
 			}
+			res.Result = result
 		}
 
 	default:
 		res.Error = &Error{Code: ErrMethodNotFound, Message: "Method not found"}
 	}
 
-	// If it was a notification (no ID), do not respond
 	if req.ID == nil {
 		if res.Error != nil {
 			return fmt.Errorf("fatal protocol error on notification: %s", res.Error.Message)
@@ -128,11 +121,6 @@ func (s *Server) handleRequest(req *Request) error {
 	}
 	out = append(out, '\n')
 	_, err = s.out.Write(out)
-
-	// Fail closed on error handling requests
-	if res.Error != nil && res.Error.Code == ErrInternal {
-		return fmt.Errorf("fatal harness error: %s", res.Error.Message)
-	}
 
 	return err
 }

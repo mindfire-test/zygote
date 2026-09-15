@@ -20,4 +20,6 @@ clean:
 	@go clean
 
 check: lint test
+	@echo "==> Running TTFV walkthrough..."
+	@bash scripts/ttfv_test.sh
 	@echo "==> All checks passed!"

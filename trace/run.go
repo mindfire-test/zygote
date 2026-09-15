@@ -62,10 +62,12 @@ func (r *RunRecorder) Step(name string) {
 // Recording returns the finalized manifest of all steps and effects.
 func (r *RunRecorder) Recording() Recording {
 	return Recording{
-		Version: 1, // SRS 9.0: FormatVersion = 1 today
-		Meta:    r.meta,
-		Steps:   r.steps,
-		Effects: r.journal.Entries(),
+		Version:       1,
+		HashAlgorithm: "blake3",
+		Producer:      "zygote-cli",
+		Meta:          r.meta,
+		Steps:         r.steps,
+		Effects:       r.journal.Entries(),
 	}
 }
 

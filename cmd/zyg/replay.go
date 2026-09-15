@@ -3,12 +3,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/mindfire/zygote/harness"
+	"github.com/mindfire/zygote/journal"
 	"github.com/mindfire/zygote/trace"
 	"github.com/mindfire/zygote/vfs"
 	"github.com/spf13/cobra"
@@ -18,6 +20,13 @@ var (
 	replayAgent string
 	replayJSON  bool
 )
+
+type divergenceOutput struct {
+	Status  string `json:"status"`
+	Class   string `json:"class"`
+	Step    int    `json:"step"`
+	Message string `json:"message"`
+}
 
 var replayCmd = &cobra.Command{
 	Use:   "replay [run.zip]",
@@ -34,13 +43,21 @@ var replayCmd = &cobra.Command{
 
 		bundle, err := trace.ImportFile(bundlePath, store)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error importing bundle: %v\n", err)
+			if replayJSON {
+				fmt.Printf(`{"status":"error","message":%q}`+"\n", err.Error())
+			} else {
+				fmt.Fprintf(os.Stderr, "Error importing bundle: %v\n", err)
+			}
 			os.Exit(2) // bundle invalid
 		}
 
 		r, err := trace.Replay(store, &bundle)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error initializing replay: %v\n", err)
+			if replayJSON {
+				fmt.Printf(`{"status":"error","message":%q}`+"\n", err.Error())
+			} else {
+				fmt.Fprintf(os.Stderr, "Error initializing replay: %v\n", err)
+			}
 			os.Exit(2)
 		}
 
@@ -74,21 +91,36 @@ var replayCmd = &cobra.Command{
 		cmdErr := cmd.Wait()
 
 		if srvErr != nil {
-			// Check if it's a divergence error
-			if strings.Contains(srvErr.Error(), "divergence") {
+			var divErr *journal.DivergenceError
+			if errors.As(srvErr, &divErr) {
 				if replayJSON {
-					fmt.Printf("{\"status\": \"diverged\", \"error\": %q}\n", srvErr.Error())
+					out := divergenceOutput{
+						Status:  "diverged",
+						Class:   string(divErr.Class),
+						Step:    divErr.Step,
+						Message: divErr.Message,
+					}
+					b, _ := json.Marshal(out)
+					fmt.Println(string(b))
 				} else {
-					fmt.Fprintf(os.Stderr, "[!] DIVERGENCE DETECTED: %v\n", srvErr)
+					fmt.Fprintf(os.Stderr, "[!] DIVERGENCE DETECTED [%s] at step %d: %s\n", divErr.Class, divErr.Step, divErr.Message)
 				}
 				os.Exit(1) // Divergence
 			}
-			fmt.Fprintf(os.Stderr, "Harness protocol error: %v\n", srvErr)
+			if replayJSON {
+				fmt.Printf(`{"status":"error","message":%q}`+"\n", srvErr.Error())
+			} else {
+				fmt.Fprintf(os.Stderr, "Harness protocol error: %v\n", srvErr)
+			}
 			os.Exit(3)
 		}
 
-		if cmdErr != nil {
-			fmt.Fprintf(os.Stderr, "Agent exited with error: %v\n", cmdErr)
+		if cmdErr != nil && cmdErr.Error() != "signal: killed" {
+			if replayJSON {
+				fmt.Printf(`{"status":"error","message":%q}`+"\n", cmdErr.Error())
+			} else {
+				fmt.Fprintf(os.Stderr, "Agent exited with error: %v\n", cmdErr)
+			}
 			os.Exit(3)
 		}
 

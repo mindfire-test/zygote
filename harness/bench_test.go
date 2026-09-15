@@ -10,11 +10,11 @@ import (
 
 type dummyHandler struct{}
 
-func (d *dummyHandler) Handshake(version int) (int, error) { return 1, nil }
-func (d *dummyHandler) Effect(op, key string, value []byte) ([]byte, error) {
+func (d *dummyHandler) Handshake(_ int) (int, error) { return 1, nil }
+func (d *dummyHandler) Effect(_, _ string, _ []byte) ([]byte, error) {
 	return []byte("ok"), nil
 }
-func (d *dummyHandler) Step(name string) (*harness.StepResult, error) {
+func (d *dummyHandler) Step(_ string) (*harness.StepResult, error) {
 	return &harness.StepResult{Match: true}, nil
 }
 

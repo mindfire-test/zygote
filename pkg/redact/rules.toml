@@ -1,0 +1,18 @@
+title = "zygote-gitleaks-rules"
+[[rules]]
+id = "aws-access-token"
+description = "AWS Access Key"
+regex = '''(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "stripe-secret-key"
+description = "Stripe Secret Key"
+regex = '''(?i)sk_(live|test)_[0-9a-zA-Z]{24}'''
+tags = ["key", "Stripe"]
+
+[[rules]]
+id = "rsa-private-key"
+description = "RSA Private Key"
+regex = '''-----BEGIN RSA PRIVATE KEY-----'''
+tags = ["key", "RSA"]

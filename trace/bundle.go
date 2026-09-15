@@ -111,6 +111,9 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 			if err != nil {
 				return Bundle{}, err
 			}
+			if rec.Version != 1 {
+				return Bundle{}, fmt.Errorf("unsupported format version: %d", rec.Version)
+			}
 			continue
 		}
 

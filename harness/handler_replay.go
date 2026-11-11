@@ -23,7 +23,12 @@ func (h *ReplayHandler) Handshake(_ int) (int, error) {
 
 // Effect fetches the recorded effect, ignoring the requested value.
 func (h *ReplayHandler) Effect(op, key string, _ []byte) ([]byte, error) {
-	return h.r.Replayer().Replay(op, key)
+	return h.r.ReplayEffect(op, key)
+}
+
+// EffectChunks fetches the recorded effect and its chunk sizes, ignoring the requested value and chunks.
+func (h *ReplayHandler) EffectChunks(op, key string, _ []byte, _ []int) ([]byte, []int, error) {
+	return h.r.ReplayEffectChunks(op, key)
 }
 
 // Step verifies the agent's world against the recording.

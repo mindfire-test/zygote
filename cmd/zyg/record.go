@@ -21,6 +21,8 @@ var (
 	recordAgent string
 	recordDir   string
 	recordOut   string
+
+	recordAutoStep bool
 )
 
 func runRecord() int {
@@ -42,7 +44,11 @@ func runRecord() int {
 	}()
 
 	store := vfs.NewMemStore()
-	r := trace.Record(store)
+	var opts []trace.Option
+	if recordAutoStep {
+		opts = append(opts, trace.WithAutoStep())
+	}
+	r := trace.Record(store, opts...)
 
 	adapter := localdir.New(recordDir)
 	if err := adapter.Load(ctx, r.World()); err != nil {
@@ -87,6 +93,8 @@ func runRecord() int {
 		fmt.Fprintf(os.Stderr, "Agent exited with error: %v\n", cmdErr)
 		exitCode = 3
 	}
+
+	r.Finish()
 
 	// Always save the bundle (NFR-3.6)
 	rec := r.Recording()
@@ -134,5 +142,6 @@ func init() {
 	recordCmd.Flags().StringVar(&recordAgent, "agent", "", "Agent command to run")
 	recordCmd.Flags().StringVar(&recordDir, "dir", ".", "Directory to record")
 	recordCmd.Flags().StringVarP(&recordOut, "out", "o", "run.zip", "Output bundle file")
+	recordCmd.Flags().BoolVar(&recordAutoStep, "auto-step", false, "Derive steps automatically from tool effects")
 	rootCmd.AddCommand(recordCmd)
 }

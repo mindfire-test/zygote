@@ -16,16 +16,21 @@ type RunRecorder struct {
 	steps    []Step
 	meta     map[string]string
 	stepBase int
+	auto     bool
 }
 
 // Record begins a new trace tracking session on top of a store.
-func Record(store vfs.Store) *RunRecorder {
-	return &RunRecorder{
+func Record(store vfs.Store, opts ...Option) *RunRecorder {
+	r := &RunRecorder{
 		world:   vfs.NewWorld(store),
 		journal: journal.NewRecorder(),
 		steps:   make([]Step, 0),
 		meta:    make(map[string]string),
 	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 // Set stores arbitrary string metadata for the run (e.g. model version, commit).
@@ -45,18 +50,24 @@ func (r *RunRecorder) Recorder() *journal.Recorder {
 
 // Step captures the current world state and effect count as a named boundary.
 func (r *RunRecorder) Step(name string) {
+	r.addStep(name, nil)
+}
+
+func (r *RunRecorder) addStep(name string, metadata map[string]string) *Step {
 	snap := r.world.Snapshot()
 	effs := len(r.journal.Entries())
 
 	step := Step{
-		N:       r.stepBase,
-		Name:    name,
-		Root:    hex.EncodeToString(snap.Root[:]),
-		Effects: effs,
+		N:        r.stepBase,
+		Name:     name,
+		Root:     hex.EncodeToString(snap.Root[:]),
+		Effects:  effs,
+		Metadata: metadata,
 	}
 
 	r.steps = append(r.steps, step)
 	r.stepBase++
+	return &step
 }
 
 // Recording returns the finalized manifest of all steps and effects.
@@ -77,6 +88,8 @@ type RunReplayer struct {
 	replayer *journal.Replayer
 	world    *vfs.World
 	stepIdx  int
+	effects  int
+	auto     bool
 }
 
 // Replay initializes a RunReplayer from a Bundle.
@@ -96,11 +109,16 @@ func Replay(store vfs.Store, bundle *Bundle) (*RunReplayer, error) {
 	copy(h[:], hBytes)
 	world := vfs.Fork(store, vfs.Snapshot{Root: h})
 
+	resolver := journal.WithResolver(func(e journal.Entry) ([]byte, error) {
+		return effectValue(store, e)
+	})
+
 	return &RunReplayer{
 		bundle:   bundle,
-		replayer: journal.NewReplayer(bundle.Recording.Effects),
+		replayer: journal.NewReplayer(bundle.Recording.Effects, resolver),
 		world:    world,
 		stepIdx:  1, // We start checking from step 1 (step 0 is the init state)
+		auto:     bundle.Recording.Meta[autoStepMetaKey] == "true",
 	}, nil
 }
 
@@ -112,6 +130,26 @@ func (r *RunReplayer) Replayer() *journal.Replayer {
 // World returns the current active world being replayed.
 func (r *RunReplayer) World() *vfs.World {
 	return r.world
+}
+
+// CheckComplete reports a step-mismatch divergence when the agent ended before replaying every recorded step and effect.
+func (r *RunReplayer) CheckComplete() error {
+	steps := r.bundle.Recording.Steps
+	if r.stepIdx < len(steps) {
+		return &journal.DivergenceError{
+			Class:   journal.ClassStepMismatch,
+			Message: fmt.Sprintf("agent stopped after step %d of %d", r.stepIdx-1, len(steps)-1),
+			Step:    r.stepIdx,
+		}
+	}
+	if total := len(r.bundle.Recording.Effects); r.effects < total {
+		return &journal.DivergenceError{
+			Class:   journal.ClassStepMismatch,
+			Message: fmt.Sprintf("agent stopped after consuming %d of %d recorded effects", r.effects, total),
+			Step:    r.stepIdx,
+		}
+	}
+	return nil
 }
 
 // Step verifies the current world against the next expected step in the bundle.

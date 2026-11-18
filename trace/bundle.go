@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/mindfire/zygote/vfs"
@@ -26,14 +27,38 @@ var (
 
 // ExportFile writes a highly portable zip bundle containing the Recording manifest
 // and all reachable cryptographically hashed vfs objects.
-func ExportFile(filename string, store vfs.Store, rec Recording) error {
+func ExportFile(filename string, store vfs.Store, rec Recording, opts ...ExportOption) error {
+	var cfg exportConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	recipients, err := cfg.ageRecipients()
+	if err != nil {
+		return err
+	}
+	effects, effectObjects, err := spillEffects(store, rec.Effects, cfg.limit())
+	if err != nil {
+		return err
+	}
+	rec.Effects = effects
+
+	if cfg.encrypt {
+		return writeEncrypted(filename, recipients, func(w io.Writer) error {
+			return writeZip(w, store, rec, effectObjects)
+		})
+	}
+
 	f, err := os.Create(filename) //nolint:gosec
 	if err != nil {
 		return err
 	}
 	defer f.Close() //nolint:errcheck
 
-	zw := zip.NewWriter(f)
+	return writeZip(f, store, rec, effectObjects)
+}
+
+func writeZip(w io.Writer, store vfs.Store, rec Recording, effectObjects map[vfs.Hash][]byte) error {
+	zw := zip.NewWriter(w)
 
 	// 1. Write canonical JSON manifest
 	manifestFile, err := zw.Create("trace.json")
@@ -65,12 +90,24 @@ func ExportFile(filename string, store vfs.Store, rec Recording) error {
 		return err
 	}
 
-	// 3. Write objects
+	for hash := range effectObjects {
+		reachable[hash] = struct{}{}
+	}
+	hashes := make([]vfs.Hash, 0, len(reachable))
 	for hash := range reachable {
+		hashes = append(hashes, hash)
+	}
+	slices.SortFunc(hashes, func(a, b vfs.Hash) int { return bytes.Compare(a[:], b[:]) })
+
+	// 3. Write objects
+	for _, hash := range hashes {
 		if hash == vfs.EmptyTreeHash {
 			continue
 		}
-		data, ok := store.Get(hash)
+		data, ok := effectObjects[hash]
+		if !ok {
+			data, ok = store.Get(hash)
+		}
 		if !ok {
 			return fmt.Errorf("missing object in store: %x", hash)
 		}
@@ -89,13 +126,35 @@ func ExportFile(filename string, store vfs.Store, rec Recording) error {
 
 // ImportFile reads a zip bundle, cryptographically validates every object's
 // integrity, and ensures the manifest is fully loadable before returning it.
-func ImportFile(filename string, store vfs.Store) (Bundle, error) {
-	r, err := zip.OpenReader(filename)
+func ImportFile(filename string, store vfs.Store, opts ...ImportOption) (Bundle, error) {
+	var cfg importConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	data, err := os.ReadFile(filename) //nolint:gosec
 	if err != nil {
 		return Bundle{}, err
 	}
-	defer r.Close() //nolint:errcheck
+	encrypted := bytes.HasPrefix(data, ageMagic)
+	if encrypted {
+		data, err = decryptBundle(data, cfg)
+		if err != nil {
+			return Bundle{}, err
+		}
+	}
 
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		if encrypted {
+			return Bundle{}, fmt.Errorf("%w: %v", ErrCorruptEncrypted, err)
+		}
+		return Bundle{}, err
+	}
+	return importZip(zr, store)
+}
+
+func importZip(r *zip.Reader, store vfs.Store) (Bundle, error) {
 	var rec Recording
 
 	// 1. Read objects and verify integrity (FR-4.3)
@@ -143,6 +202,10 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 				return Bundle{}, err
 			}
 		}
+	}
+
+	if err := validateEffects(store, rec.Effects); err != nil {
+		return Bundle{}, err
 	}
 
 	// 2. Validate reachability (FR-4.4)

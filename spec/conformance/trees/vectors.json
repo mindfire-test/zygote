@@ -1,0 +1,53 @@
+[
+  {
+    "name": "empty_tree",
+    "description": "The empty tree with zero entries",
+    "entries": [],
+    "encoded_hex": "00000000",
+    "hash_hex": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd"
+  },
+  {
+    "name": "single_file",
+    "description": "Tree with a single hello.txt file",
+    "entries": [
+      {
+        "name": "hello.txt",
+        "kind": "file",
+        "mode": 420,
+        "size": 12,
+        "hash": "dc5a4edb8240b018124052c330270696f96771a63b45250a5c17d3000e823355"
+      }
+    ],
+    "encoded_hex": "00000001000968656c6c6f2e74787400000001a4000000000000000cdc5a4edb8240b018124052c330270696f96771a63b45250a5c17d3000e823355",
+    "hash_hex": "a55a08ff3120afafdc875863ff79a710733d9374ec0584dfee01662dfac8e382"
+  },
+  {
+    "name": "multi_sorted_entries",
+    "description": "Tree with multiple entries in lexicographical sort order",
+    "entries": [
+      {
+        "name": "README.md",
+        "kind": "file",
+        "mode": 420,
+        "size": 12,
+        "hash": "dc5a4edb8240b018124052c330270696f96771a63b45250a5c17d3000e823355"
+      },
+      {
+        "name": "main.go",
+        "kind": "file",
+        "mode": 420,
+        "size": 29,
+        "hash": "6dec1adc38711e705c17efde85abc835a08f51a591f98d7d0a1f148b306019d3"
+      },
+      {
+        "name": "subpkg",
+        "kind": "dir",
+        "mode": 493,
+        "size": 0,
+        "hash": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd"
+      }
+    ],
+    "encoded_hex": "000000030009524541444d452e6d6400000001a4000000000000000cdc5a4edb8240b018124052c330270696f96771a63b45250a5c17d3000e82335500076d61696e2e676f00000001a4000000000000001d6dec1adc38711e705c17efde85abc835a08f51a591f98d7d0a1f148b306019d30006737562706b6701000001ed0000000000000000ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+    "hash_hex": "c94db9eccf24eaf45db4afd0199fdb8dba4dbb0ce81efd6f05246649cafcf3b6"
+  }
+]

@@ -48,4 +48,6 @@ type Check struct {
 type Bundle struct {
 	Recording Recording
 	Store     vfs.Store
+	Signature []byte // Detached Ed25519 signature if present in bundle (M4 FR-4.8)
+	Verified  bool   // True if the signature was cryptographically verified against a public key
 }

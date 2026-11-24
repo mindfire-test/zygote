@@ -19,7 +19,11 @@ clean:
 	@rm -rf bin/
 	@go clean
 
-check: lint test
+conformance:
+	@echo "==> Running format and conformance test suite..."
+	@go test -v -race ./spec/conformance/...
+
+check: lint test conformance
 	@echo "==> Running TTFV walkthrough..."
 	@bash scripts/ttfv_test.sh
 	@echo "==> All checks passed!"

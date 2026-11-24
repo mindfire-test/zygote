@@ -1,0 +1,155 @@
+[
+  {
+    "name": "match_exact",
+    "description": "Replay matching recorded effect and world hash",
+    "recording": {
+      "version": 1,
+      "hash_algorithm": "blake3",
+      "producer": "zygote/conformance-gen",
+      "has_raw_prompts": false,
+      "steps": [
+        {
+          "n": 0,
+          "name": "step0",
+          "root": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+          "effects": 1
+        }
+      ],
+      "effects": [
+        {
+          "seq": 0,
+          "op": "model",
+          "key": "prompt-1",
+          "value": "cmVzcG9uc2UtMQ=="
+        }
+      ]
+    },
+    "replay_effects": [
+      {
+        "seq": 0,
+        "op": "model",
+        "key": "prompt-1",
+        "value": "cmVzcG9uc2UtMQ=="
+      }
+    ],
+    "replay_world": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+    "expected_match": true
+  },
+  {
+    "name": "effect_mismatch",
+    "description": "Replay with changed prompt or tool op/key",
+    "recording": {
+      "version": 1,
+      "hash_algorithm": "blake3",
+      "producer": "zygote/conformance-gen",
+      "has_raw_prompts": false,
+      "steps": [
+        {
+          "n": 0,
+          "name": "step0",
+          "root": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+          "effects": 1
+        }
+      ],
+      "effects": [
+        {
+          "seq": 0,
+          "op": "model",
+          "key": "prompt-1",
+          "value": "cmVzcG9uc2UtMQ=="
+        }
+      ]
+    },
+    "replay_effects": [
+      {
+        "seq": 0,
+        "op": "model",
+        "key": "different-prompt",
+        "value": "cmVzcG9uc2UtMQ=="
+      }
+    ],
+    "replay_world": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+    "expected_match": false,
+    "expected_class": "effect-mismatch"
+  },
+  {
+    "name": "world_mismatch",
+    "description": "Replay where effects match but the resulting world hash diverges",
+    "recording": {
+      "version": 1,
+      "hash_algorithm": "blake3",
+      "producer": "zygote/conformance-gen",
+      "has_raw_prompts": false,
+      "steps": [
+        {
+          "n": 0,
+          "name": "step0",
+          "root": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+          "effects": 1
+        }
+      ],
+      "effects": [
+        {
+          "seq": 0,
+          "op": "model",
+          "key": "prompt-1",
+          "value": "cmVzcG9uc2UtMQ=="
+        }
+      ]
+    },
+    "replay_effects": [
+      {
+        "seq": 0,
+        "op": "model",
+        "key": "prompt-1",
+        "value": "cmVzcG9uc2UtMQ=="
+      }
+    ],
+    "replay_world": "1111111111111111111111111111111111111111111111111111111111111111",
+    "expected_match": false,
+    "expected_class": "world-mismatch"
+  },
+  {
+    "name": "exhausted",
+    "description": "Replay where agent requests more effects than recorded",
+    "recording": {
+      "version": 1,
+      "hash_algorithm": "blake3",
+      "producer": "zygote/conformance-gen",
+      "has_raw_prompts": false,
+      "steps": [
+        {
+          "n": 0,
+          "name": "step0",
+          "root": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+          "effects": 1
+        }
+      ],
+      "effects": [
+        {
+          "seq": 0,
+          "op": "model",
+          "key": "prompt-1",
+          "value": "cmVzcG9uc2UtMQ=="
+        }
+      ]
+    },
+    "replay_effects": [
+      {
+        "seq": 0,
+        "op": "model",
+        "key": "prompt-1",
+        "value": "cmVzcG9uc2UtMQ=="
+      },
+      {
+        "seq": 1,
+        "op": "model",
+        "key": "prompt-2",
+        "value": "cmVzcG9uc2UtMg=="
+      }
+    ],
+    "replay_world": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+    "expected_match": false,
+    "expected_class": "exhausted"
+  }
+]

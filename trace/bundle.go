@@ -22,6 +22,8 @@ var (
 	ErrHashMismatch = errors.New("corrupt bundle: object content does not match its hash filename")
 	// ErrMissingObject indicates missing object.
 	ErrMissingObject = errors.New("corrupt bundle: recording relies on objects not present in the bundle")
+	// ErrPathTraversal indicates a dangerous path entry in bundle.
+	ErrPathTraversal = errors.New("corrupt bundle: path traversal detected")
 )
 
 // ExportFile writes a highly portable zip bundle containing the Recording manifest
@@ -100,6 +102,9 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 
 	// 1. Read objects and verify integrity (FR-4.3)
 	for _, f := range r.File {
+		if strings.Contains(f.Name, "..") || strings.HasPrefix(f.Name, "/") || strings.HasPrefix(f.Name, "\\") {
+			return Bundle{}, ErrPathTraversal
+		}
 		if f.Name == "trace.json" {
 			rc, err := f.Open()
 			if err != nil {

@@ -1,0 +1,81 @@
+[
+  {
+    "name": "handshake_and_step",
+    "description": "Standard handshake followed by step checkpoint",
+    "messages": [
+      {
+        "direction": "agent-\u003ezyg",
+        "raw": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "handshake",
+          "params": {
+            "version": 1
+          }
+        }
+      },
+      {
+        "direction": "zyg-\u003eagent",
+        "raw": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "version": 1
+          }
+        }
+      },
+      {
+        "direction": "agent-\u003ezyg",
+        "raw": {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "method": "step",
+          "params": {
+            "name": "init"
+          }
+        }
+      },
+      {
+        "direction": "zyg-\u003eagent",
+        "raw": {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "match": true,
+            "expected": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd",
+            "actual": "ec2bd03bf86b935fa34d71ad7ebb049f1f10f87d343e521511d8f9e6625620cd"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "effect_record",
+    "description": "Recording a model effect over harness protocol",
+    "messages": [
+      {
+        "direction": "agent-\u003ezyg",
+        "raw": {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "method": "effect",
+          "params": {
+            "op": "model",
+            "key": "plan-fix",
+            "value": "eyJwbGFuIjoidXBkYXRlIn0="
+          }
+        }
+      },
+      {
+        "direction": "zyg-\u003eagent",
+        "raw": {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "value": "eyJwbGFuIjoidXBkYXRlIn0="
+          }
+        }
+      }
+    ]
+  }
+]

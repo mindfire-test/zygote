@@ -230,7 +230,7 @@ On a 4 vCPU reference node, `go test -race ./...` green.
 | `source/localdir` | Adapter for agents that edit a working directory | ✅ implemented |
 | `harness` | Stdio JSON-RPC so agents in **any language** can be recorded | M1 |
 | `redact` | Secret scanning, path exclusion, digest-only retention | M1 |
-| `cmd/zyg` | CLI: `record`, `replay`, `steps`, `diff`, `fork`, `verify` | M1 |
+| `cmd/zyg` | CLI: `record`, `replay`, `steps`, `diff`, `fork`, `verify`, `gc` | M1 |
 | `source/*` | Adapters for agentOS, E2B, Daytona, OCI | M2 |
 | `mcp` | MCP server | M2 |
 | `ci` | `zyg verify` corpus runner + GitHub Action | M3 |

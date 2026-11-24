@@ -2,12 +2,16 @@ package trace_test
 
 import (
 	"archive/zip"
+	"bytes"
+	"context"
+	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/mindfire/zygote/pkg/compress"
 	"github.com/mindfire/zygote/trace"
 	"github.com/mindfire/zygote/vfs"
 )
@@ -194,3 +198,75 @@ func injectCorruption(t *testing.T, src, dst string) {
 		_ = rc.Close()
 	}
 }
+
+func TestZstdCompressedBundle(t *testing.T) {
+	store1 := vfs.NewMemStore()
+	r := trace.Record(store1)
+	r.Set("agent", "zstd-tester")
+	r.Step("init")
+
+	largeContent := bytes.Repeat([]byte("package main\n\nfunc main() {\n\t// compressible code pattern repeated\n}\n"), 100)
+	if err := r.World().WriteFile("large.go", largeContent, 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	r.Step("add_large")
+	rec := r.Recording()
+
+	tmpDir := t.TempDir()
+	bundlePath := filepath.Join(tmpDir, "run_zstd.zip")
+
+	// Export with zstd compression enabled
+	err := trace.ExportBundle(bundlePath, store1, rec, trace.ExportOptions{Compress: true})
+	if err != nil {
+		t.Fatalf("ExportBundle with Compress failed: %v", err)
+	}
+
+	// Verify that objects inside zip are indeed zstd-compressed
+	zr, err := zip.OpenReader(bundlePath)
+	if err != nil {
+		t.Fatalf("OpenReader failed: %v", err)
+	}
+	foundCompressedObject := false
+	for _, f := range zr.File {
+		if strings.HasPrefix(f.Name, "objects/") {
+			rc, err := f.Open()
+			if err != nil {
+				t.Fatalf("open entry %s: %v", f.Name, err)
+			}
+			b, err := io.ReadAll(rc)
+			_ = rc.Close()
+			if err != nil {
+				t.Fatalf("read entry %s: %v", f.Name, err)
+			}
+			if compress.IsCompressed(b) {
+				foundCompressedObject = true
+				if f.Method != zip.Store {
+					t.Errorf("expected zstd compressed entry to use zip.Store method, got %d", f.Method)
+				}
+			}
+		}
+	}
+	_ = zr.Close()
+
+	if !foundCompressedObject {
+		t.Fatalf("expected at least one zstd-compressed object in bundle")
+	}
+
+	// Transparent import
+	store2 := vfs.NewMemStore()
+	bundle, err := trace.ImportFile(bundlePath, store2)
+	if err != nil {
+		t.Fatalf("ImportFile failed: %v", err)
+	}
+
+	// Verify file content can be retrieved uncompressed
+	step1Root := bundle.Recording.Steps[1].Root
+	var rootHash vfs.Hash
+	hb, _ := hex.DecodeString(step1Root)
+	copy(rootHash[:], hb)
+
+	if err := vfs.Verify(context.Background(), store2, vfs.Snapshot{Root: rootHash}); err != nil {
+		t.Fatalf("vfs.Verify failed after importing zstd bundle: %v", err)
+	}
+}
+

@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	replayAgent string
-	replayJSON  bool
+	replayAgent     string
+	replayJSON      bool
+	replayVerifyKey string
 )
 
 type divergenceOutput struct {
@@ -41,7 +42,21 @@ var replayCmd = &cobra.Command{
 		bundlePath := args[0]
 		store := vfs.NewMemStore()
 
-		bundle, err := trace.ImportFile(bundlePath, store)
+		var pubKey []byte
+		if replayVerifyKey != "" {
+			k, err := trace.LoadPublicKey(replayVerifyKey)
+			if err != nil {
+				if replayJSON {
+					fmt.Printf(`{"status":"error","message":%q}`+"\n", err.Error())
+				} else {
+					fmt.Fprintf(os.Stderr, "Error loading public key: %v\n", err)
+				}
+				os.Exit(2)
+			}
+			pubKey = k
+		}
+
+		bundle, err := trace.ImportVerifiedFile(bundlePath, store, pubKey)
 		if err != nil {
 			if replayJSON {
 				fmt.Printf(`{"status":"error","message":%q}`+"\n", err.Error())
@@ -135,5 +150,6 @@ var replayCmd = &cobra.Command{
 func init() {
 	replayCmd.Flags().StringVar(&replayAgent, "agent", "", "Agent command to run")
 	replayCmd.Flags().BoolVar(&replayJSON, "json", false, "Output machine-readable JSON")
+	replayCmd.Flags().StringVar(&replayVerifyKey, "verify-key", "", "Public key file to verify bundle signature")
 	rootCmd.AddCommand(replayCmd)
 }

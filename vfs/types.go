@@ -1,6 +1,8 @@
 // Package vfs provides vfs.
 package vfs
 
+import "time"
+
 // Hash is a 32-byte BLAKE3 root hash.
 type Hash [32]byte
 
@@ -9,10 +11,20 @@ type Snapshot struct {
 	Root Hash
 }
 
+// ObjectInfo contains metadata for an object in a Store.
+type ObjectInfo struct {
+	Hash    Hash
+	Size    int64
+	ModTime time.Time
+}
+
 // Store is the content-addressed object store interface.
 type Store interface {
 	Put(b []byte) (Hash, error)
 	Get(h Hash) (b []byte, ok bool)
+	Delete(h Hash) error
+	Objects() ([]Hash, error)
+	Stat(h Hash) (ObjectInfo, error)
 }
 
 // Kind represents the type of a filesystem entry.

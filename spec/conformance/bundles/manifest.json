@@ -1,0 +1,25 @@
+[
+  {
+    "filename": "bundle_valid.zip",
+    "description": "Valid bundle with full reachability and intact hashes",
+    "expected_valid": true
+  },
+  {
+    "filename": "bundle_corrupt_hash.zip",
+    "description": "Bundle where an object in objects/ does not match its BLAKE3 hash filename",
+    "expected_valid": false,
+    "expected_error": "corrupt bundle: object content does not match its hash filename"
+  },
+  {
+    "filename": "bundle_missing_object.zip",
+    "description": "Bundle missing an object required by step reachability",
+    "expected_valid": false,
+    "expected_error": "corrupt bundle: recording relies on objects not present in the bundle"
+  },
+  {
+    "filename": "bundle_traversal_attack.zip",
+    "description": "Bundle containing a path traversal attack (e.g. ../../etc/passwd)",
+    "expected_valid": false,
+    "expected_error": "path traversal detected"
+  }
+]

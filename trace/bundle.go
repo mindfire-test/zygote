@@ -22,11 +22,19 @@ var (
 	ErrHashMismatch = errors.New("corrupt bundle: object content does not match its hash filename")
 	// ErrMissingObject indicates missing object.
 	ErrMissingObject = errors.New("corrupt bundle: recording relies on objects not present in the bundle")
+	// ErrPathTraversal indicates a dangerous path entry in bundle.
+	ErrPathTraversal = errors.New("corrupt bundle: path traversal detected")
 )
 
 // ExportFile writes a highly portable zip bundle containing the Recording manifest
 // and all reachable cryptographically hashed vfs objects.
 func ExportFile(filename string, store vfs.Store, rec Recording) error {
+	return ExportSignedFile(filename, store, rec, nil)
+}
+
+// ExportSignedFile writes a zip bundle with an optional detached Ed25519 signature
+// over the canonicalized manifest (trace.json per RFC 8785) (FR-4.8, OD-7).
+func ExportSignedFile(filename string, store vfs.Store, rec Recording, privKey []byte) error {
 	f, err := os.Create(filename) //nolint:gosec
 	if err != nil {
 		return err
@@ -40,7 +48,7 @@ func ExportFile(filename string, store vfs.Store, rec Recording) error {
 	if err != nil {
 		return err
 	}
-	b, err := json.MarshalIndent(rec, "", "  ") // RFC 8785 canonicalization happens at signing M4
+	b, err := json.MarshalIndent(rec, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -48,7 +56,22 @@ func ExportFile(filename string, store vfs.Store, rec Recording) error {
 		return err
 	}
 
-	// 2. Identify all reachable objects
+	// 2. If private key provided, sign canonical manifest and write "signature" entry
+	if len(privKey) > 0 {
+		sig, err := SignManifest(rec, privKey)
+		if err != nil {
+			return fmt.Errorf("signing manifest: %w", err)
+		}
+		sigFile, err := zw.Create("signature")
+		if err != nil {
+			return err
+		}
+		if _, err := sigFile.Write(sig); err != nil {
+			return err
+		}
+	}
+
+	// 3. Identify all reachable objects
 	var snaps []vfs.Snapshot
 	for _, step := range rec.Steps {
 		var h vfs.Hash
@@ -65,7 +88,7 @@ func ExportFile(filename string, store vfs.Store, rec Recording) error {
 		return err
 	}
 
-	// 3. Write objects
+	// 4. Write objects
 	for hash := range reachable {
 		if hash == vfs.EmptyTreeHash {
 			continue
@@ -90,6 +113,15 @@ func ExportFile(filename string, store vfs.Store, rec Recording) error {
 // ImportFile reads a zip bundle, cryptographically validates every object's
 // integrity, and ensures the manifest is fully loadable before returning it.
 func ImportFile(filename string, store vfs.Store) (Bundle, error) {
+	return ImportVerifiedFile(filename, store, nil)
+}
+
+// ImportVerifiedFile reads a zip bundle, cryptographically validates every object's
+// integrity, checks reachability, and optionally verifies the detached Ed25519 signature
+// against the provided public key (if pubKey is non-empty).
+// If pubKey is provided and the bundle has no signature, ErrNoSignature is returned.
+// If pubKey is provided and the signature does not match, ErrInvalidSignature is returned.
+func ImportVerifiedFile(filename string, store vfs.Store, pubKey []byte) (Bundle, error) {
 	r, err := zip.OpenReader(filename)
 	if err != nil {
 		return Bundle{}, err
@@ -97,9 +129,26 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 	defer r.Close() //nolint:errcheck
 
 	var rec Recording
+	var signature []byte
 
 	// 1. Read objects and verify integrity (FR-4.3)
 	for _, f := range r.File {
+		if strings.Contains(f.Name, "..") || strings.HasPrefix(f.Name, "/") || strings.HasPrefix(f.Name, "\\") {
+			return Bundle{}, ErrPathTraversal
+		}
+		if f.Name == "signature" {
+			rc, err := f.Open()
+			if err != nil {
+				return Bundle{}, err
+			}
+			sigBytes, err := io.ReadAll(rc)
+			_ = rc.Close()
+			if err != nil {
+				return Bundle{}, err
+			}
+			signature = sigBytes
+			continue
+		}
 		if f.Name == "trace.json" {
 			rc, err := f.Open()
 			if err != nil {
@@ -157,5 +206,16 @@ func ImportFile(filename string, store vfs.Store) (Bundle, error) {
 		}
 	}
 
-	return Bundle{Recording: rec, Store: store}, nil
+	verified := false
+	if len(pubKey) > 0 {
+		if len(signature) == 0 {
+			return Bundle{Recording: rec, Store: store, Signature: signature}, ErrNoSignature
+		}
+		if !VerifyManifest(rec, signature, pubKey) {
+			return Bundle{Recording: rec, Store: store, Signature: signature}, ErrInvalidSignature
+		}
+		verified = true
+	}
+
+	return Bundle{Recording: rec, Store: store, Signature: signature, Verified: verified}, nil
 }

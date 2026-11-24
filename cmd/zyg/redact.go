@@ -13,6 +13,8 @@ import (
 var (
 	redactPolicy string
 	redactOut    string
+	redactSign   bool
+	redactKey    string
 )
 
 var redactCmd = &cobra.Command{
@@ -41,7 +43,21 @@ var redactCmd = &cobra.Command{
 			os.Exit(3)
 		}
 
-		if err := trace.ExportFile(redactOut, cleanBundle.Store, cleanBundle.Recording); err != nil {
+		var privKey []byte
+		if redactSign || redactKey != "" {
+			if redactKey == "" {
+				fmt.Fprintln(os.Stderr, "Error: --key <private-key-file> is required when --sign is specified")
+				os.Exit(3)
+			}
+			pk, err := trace.LoadPrivateKey(redactKey)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error loading private key: %v\n", err)
+				os.Exit(3)
+			}
+			privKey = pk
+		}
+
+		if err := trace.ExportSignedFile(redactOut, cleanBundle.Store, cleanBundle.Recording, privKey); err != nil {
 			fmt.Fprintf(os.Stderr, "Error exporting redacted bundle: %v\n", err)
 			os.Exit(3)
 		}
@@ -53,5 +69,7 @@ var redactCmd = &cobra.Command{
 func init() {
 	redactCmd.Flags().StringVar(&redactPolicy, "policy", ".zygote/redact.yaml", "Path to redaction policy")
 	redactCmd.Flags().StringVarP(&redactOut, "out", "o", "clean.zip", "Output bundle file")
+	redactCmd.Flags().BoolVar(&redactSign, "sign", false, "Cryptographically sign bundle with an Ed25519 private key")
+	redactCmd.Flags().StringVar(&redactKey, "key", "", "Path to Ed25519 private key file")
 	rootCmd.AddCommand(redactCmd)
 }

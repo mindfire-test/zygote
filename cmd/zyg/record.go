@@ -21,6 +21,8 @@ var (
 	recordAgent string
 	recordDir   string
 	recordOut   string
+	recordSign  bool
+	recordKey   string
 )
 
 func runRecord() int {
@@ -113,7 +115,21 @@ func runRecord() int {
 		return 3
 	}
 
-	if err := trace.ExportFile(recordOut, cleanBundle.Store, cleanBundle.Recording); err != nil {
+	var privKey []byte
+	if recordSign || recordKey != "" {
+		if recordKey == "" {
+			fmt.Fprintln(os.Stderr, "Error: --key <private-key-file> is required when --sign is specified")
+			return 3
+		}
+		pk, err := trace.LoadPrivateKey(recordKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading private key: %v\n", err)
+			return 3
+		}
+		privKey = pk
+	}
+
+	if err := trace.ExportSignedFile(recordOut, cleanBundle.Store, cleanBundle.Recording, privKey); err != nil {
 		fmt.Fprintf(os.Stderr, "Error exporting bundle: %v\n", err)
 		return 3
 	}
@@ -134,5 +150,7 @@ func init() {
 	recordCmd.Flags().StringVar(&recordAgent, "agent", "", "Agent command to run")
 	recordCmd.Flags().StringVar(&recordDir, "dir", ".", "Directory to record")
 	recordCmd.Flags().StringVarP(&recordOut, "out", "o", "run.zip", "Output bundle file")
+	recordCmd.Flags().BoolVar(&recordSign, "sign", false, "Cryptographically sign bundle with an Ed25519 private key")
+	recordCmd.Flags().StringVar(&recordKey, "key", "", "Path to Ed25519 private key file")
 	rootCmd.AddCommand(recordCmd)
 }
